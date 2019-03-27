@@ -1,4 +1,4 @@
-<##//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 ////                                                             ////
 ////  Author: Eyal Hochberg                                      ////
 ////          eyal@provartec.com                                 ////
@@ -27,28 +27,71 @@
 ////                                                             ////
 //////////////////////////////////////////////////////////////////##>
 
-INCLUDE def_axi2apb.txt
-OUTFILE PREFIX_cmd.v
 
-module  PREFIX_cmd (PORTS);
+module  axi2apb_cmd (
+   clk,
+   reset_n,
+   AWGROUP_APB_AXI_A_ID,
+   AWGROUP_APB_AXI_A_ADDR,
+   AWGROUP_APB_AXI_A_LEN,
+   AWGROUP_APB_AXI_A_SIZE,
+   AWGROUP_APB_AXI_A_VALID,
+   AWGROUP_APB_AXI_A_READY,
+   ARGROUP_APB_AXI_A_ID,
+   ARGROUP_APB_AXI_A_ADDR,
+   ARGROUP_APB_AXI_A_LEN,
+   ARGROUP_APB_AXI_A_SIZE,
+   ARGROUP_APB_AXI_A_VALID,
+   AWGROUP_APB_AXI_A_READY,
+   finish_wr,
+   finish_rd,
+   cmd_empty,
+   cmd_read,
+   cmd_id,
+   cmd_addr,
+   cmd_err
+);
 
-   input 		          clk;
-   input 		          reset;
+   input 		  clk;
+   input 		  reset_n;
 
-   port                   AWGROUP_APB_AXI_A;
-   port                   ARGROUP_APB_AXI_A;
+   input [3:0]		  AWGROUP_APB_AXI_A_ID;
+   input [31:0]		  AWGROUP_APB_AXI_A_ADDR;
+   input [3:0]		  AWGROUP_APB_AXI_A_LEN;
+   input [1:0]		  AWGROUP_APB_AXI_A_SIZE;
+   input 		  AWGROUP_APB_AXI_A_VALID;
+   output 		  AWGROUP_APB_AXI_A_READY;
+
+   input [3:0]		  ARGROUP_APB_AXI_A_ID;
+   input [31:0]		  ARGROUP_APB_AXI_A_ADDR;
+   input [3:0]		  ARGROUP_APB_AXI_A_LEN;
+   input [1:0]		  ARGROUP_APB_AXI_A_SIZE;
+   input 		  ARGROUP_APB_AXI_A_VALID;
+   output 		  ARGROUP_APB_AXI_A_READY;
+
    input                  finish_wr;
    input                  finish_rd;
          
    output                 cmd_empty;
    output                 cmd_read;
-   output [ID_BITS-1:0]   cmd_id;
-   output [ADDR_BITS-1:0] cmd_addr;
+   output [3-1:0]   	  cmd_id;
+   output [31-1:0] 	  cmd_addr;
    output                 cmd_err;
    
-   
-   wire                   AGROUP_APB_AXI_A;
-   
+   wire	[3:0]		  AWGROUP_APB_AXI_A_ID;
+   wire	[31:0]		  AWGROUP_APB_AXI_A_ADDR;
+   wire	[3:0]		  AWGROUP_APB_AXI_A_LEN;
+   wire	[1:0]		  AWGROUP_APB_AXI_A_SIZE;
+   wire			  AWGROUP_APB_AXI_A_VALID;
+   wire	 		  AWGROUP_APB_AXI_A_READY;
+
+   wire	[3:0]		  ARGROUP_APB_AXI_A_ID;
+   wire	[31:0]		  ARGROUP_APB_AXI_A_ADDR;
+   wire	[3:0]		  ARGROUP_APB_AXI_A_LEN;
+   wire	[1:0]		  ARGROUP_APB_AXI_A_SIZE;
+   wire			  ARGROUP_APB_AXI_A_VALID;
+   wire	 		  ARGROUP_APB_AXI_A_READY;
+
    wire                   cmd_push;
    wire                   cmd_pop;
    wire                   cmd_empty;
@@ -60,39 +103,44 @@ module  PREFIX_cmd (PORTS);
    wire                   AERR;
    
    
-   assign                 wreq = AWVALID;
-   assign                 rreq = ARVALID;
-   assign                 wack = AWVALID & AWREADY;
-   assign                 rack = ARVALID & ARREADY;
+   assign                 wreq = AWGROUP_APB_AXI_A_VALID;
+   assign                 rreq = ARGROUP_APB_AXI_A_VALID;
+   assign                 wack = AWGROUP_APB_AXI_A_VALID & AWGROUP_APB_AXI_A_READY;
+   assign                 rack = ARGROUP_APB_AXI_A_VALID & AWGROUP_APB_AXI_A_READY;
          
-   always @(posedge clk or posedge reset)
-     if (reset)
-       read <= #FFD 1'b1;
+   always @(posedge clk )
+     if (~reset_n)
+       read <= #1 1'b1;
      else if (wreq & (rack | (~rreq)))
-       read <= #FFD 1'b0;
+       read <= #1 1'b0;
      else if (rreq & (wack | (~wreq)))
-       read <= #FFD 1'b1;
+       read <= #1 1'b1;
 
 	//command mux
-	assign AGROUP_APB_AXI_A = read ? ARGROUP_APB_AXI_A : AWGROUP_APB_AXI_A;
-	assign AERR   = (ASIZE != 'd2) | (ALEN != 'd0); //support only 32 bit single AXI commands
+	assign AGROUP_APB_AXI_A_ID    = read ? ARGROUP_APB_AXI_A_ID    : AWGROUP_APB_AXI_A_ID   ;
+	assign AGROUP_APB_AXI_A_ADDR  = read ? ARGROUP_APB_AXI_A_ADDR  : AWGROUP_APB_AXI_A_ADDR ;
+	assign AGROUP_APB_AXI_A_LEN   = read ? ARGROUP_APB_AXI_A_LEN   : AWGROUP_APB_AXI_A_LEN  ;
+	assign AGROUP_APB_AXI_A_SIZE  = read ? ARGROUP_APB_AXI_A_SIZE  : AWGROUP_APB_AXI_A_SIZE ;
+	assign AGROUP_APB_AXI_A_VALID = read ? ARGROUP_APB_AXI_A_VALID : AWGROUP_APB_AXI_A_VALID;
+	assign AGROUP_APB_AXI_A_READY = read ? ARGROUP_APB_AXI_A_READY : AWGROUP_APB_AXI_A_READY;
+
+	assign AERR   = (AGROUP_APB_AXI_A_SIZE != 'd2) | (AGROUP_APB_AXI_A_LEN != 'd0); //support only 32 bit single AXI commands
    
-   assign ARREADY = (~cmd_full) & read;
-   assign AWREADY = (~cmd_full) & (~read);
+   assign ARGROUP_APB_AXI_A_READY = (~cmd_full) & read;
+   assign AWGROUP_APB_AXI_A_READY = (~cmd_full) & (~read);
    
-    assign 		      cmd_push  = AVALID & AREADY;
+    assign 		      cmd_push  = AGROUP_APB_AXI_A_VALID & AGROUP_APB_AXI_A_READY;
     assign 		      cmd_pop   = cmd_read ? finish_rd : finish_wr;
    
-CREATE prgen_fifo.v DEFCMD(SWAP CONST(#FFD) #FFD)
-   prgen_fifo #(ID_BITS+ADDR_BITS+2, CMD_DEPTH) 
+   prgen_fifo #(4+32+2, 1) 
    cmd_fifo(
 	    .clk(clk),
-	    .reset(reset),
+	    .reset_n(reset_n),
 	    .push(cmd_push),
 	    .pop(cmd_pop),
 	    .din({
-			AID,
-			AADDR,
+			AGROUP_APB_AXI_A_ID,
+			AGROUP_APB_AXI_A_ADDR,
 			AERR,
 			read
 			}
@@ -108,7 +156,6 @@ CREATE prgen_fifo.v DEFCMD(SWAP CONST(#FFD) #FFD)
 	    .full(cmd_full)
 	    );
 
-		
    
 endmodule
 

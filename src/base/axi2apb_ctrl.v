@@ -1,4 +1,4 @@
-<##//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 ////                                                             ////
 ////  Author: Eyal Hochberg                                      ////
 ////          eyal@provartec.com                                 ////
@@ -27,37 +27,46 @@
 ////                                                             ////
 //////////////////////////////////////////////////////////////////##>
 
-INCLUDE def_axi2apb.txt
-OUTFILE PREFIX_ctrl.v
 
-module  PREFIX_ctrl (PORTS);
+module  axi2apb_ctrl (
+         clk,
+         reset_n,
+         finish_wr,
+         finish_rd,
+         cmd_empty,
+         cmd_read,
+         WVALID,
+   	 psel,
+   	 penable,
+   	 pwrite,
+   	 pready
+);
 
 
-   input              clk;
-   input              reset;
+   input        clk;
+   input        reset_n;
 
-   input              finish_wr;
-   input              finish_rd;
+   input        finish_wr;
+   input        finish_rd;
    
-   input              cmd_empty;
-   input              cmd_read;
-   input              WVALID;
+   input        cmd_empty;
+   input        cmd_read;
+   input        WVALID;
 
-   output 		      psel;
-   output 		      penable;
-   output 		      pwrite;
-   input 		      pready;
+   output 	psel;
+   output 	penable;
+   output 	pwrite;
+   input 	pready;
    
+   wire	 	wstart;
+   wire         rstart;
    
-   wire	 		      wstart;
-   wire                       rstart;
-   
-   reg                        busy;
-   reg                        psel;
-   reg 			      penable;
-   reg 			      pwrite;
-   wire                       pack;
-   wire                       cmd_ready;
+   reg          busy;
+   reg          psel;
+   reg 		penable;
+   reg 		pwrite;
+   wire         pack;
+   wire         cmd_ready;
    
 
    assign                     cmd_ready = (~busy) & (~cmd_empty);
@@ -66,37 +75,37 @@ module  PREFIX_ctrl (PORTS);
    
    assign             pack = psel & penable & pready;
    
-   always @(posedge clk or posedge reset)
-     if (reset)
-       busy <= #FFD 1'b0;
+   always @(posedge clk )
+     if (~reset_n)
+       busy <= #1 1'b0;
      else if (psel)
-       busy <= #FFD 1'b1;
+       busy <= #1 1'b1;
      else if (finish_rd | finish_wr)
-       busy <= #FFD 1'b0;
+       busy <= #1 1'b0;
    
-   always @(posedge clk or posedge reset)
-     if (reset)
-       psel <= #FFD 1'b0;
+   always @(posedge clk )
+     if (~reset_n)
+       psel <= #1 1'b0;
      else if (pack)
-       psel <= #FFD 1'b0;
+       psel <= #1 1'b0;
      else if (wstart | rstart)
-       psel <= #FFD 1'b1;
+       psel <= #1 1'b1;
    
-   always @(posedge clk or posedge reset)
-     if (reset)
-       penable <= #FFD 1'b0;
+   always @(posedge clk )
+     if (~reset_n)
+       penable <= #1 1'b0;
      else if (pack)
-       penable <= #FFD 1'b0;
+       penable <= #1 1'b0;
      else if (psel)
-       penable <= #FFD 1'b1;
+       penable <= #1 1'b1;
 
-   always @(posedge clk or posedge reset)
-     if (reset)
-       pwrite  <= #FFD 1'b0;
+   always @(posedge clk )
+     if (~reset_n)
+       pwrite  <= #1 1'b0;
      else if (pack)
-       pwrite  <= #FFD 1'b0;
+       pwrite  <= #1 1'b0;
      else if (wstart)
-       pwrite  <= #FFD 1'b1;
+       pwrite  <= #1 1'b1;
    
 
 endmodule

@@ -27,49 +27,69 @@
 ////                                                             ////
 //////////////////////////////////////////////////////////////////##>
 
-INCLUDE def_axi2apb.txt
-OUTFILE PREFIX_wr.v
 
-module  PREFIX_wr (PORTS);
+module  axi2apb_wr (
+	);
 
-   input 		          clk;
-   input 		          reset;
+   input 	      clk;
+   input 	      reset_n;
    
-   input                  GROUP_APB3;
+   input              psel;
+   input              penable;
+   input              pwrite;
+   input  [31:0]      paddr;
+   input  [31:0]      pwdata;
+   output [31:0]      prdata;
+   output             pslverr;
+   output             pready;
       
-   input                  cmd_err;
-   input [ID_BITS-1:0]    cmd_id;
-   output                 finish_wr;
+   input              cmd_err;
+   input [4-1:0]      cmd_id;
+   output             finish_wr;
    
-   port                   WGROUP_APB_AXI_W;
-   port                   BGROUP_APB_AXI_B;
-   
+   input  [3:0]       WGROUP_APB_AXI_W_ID;
+   input  [31:0]      WGROUP_APB_AXI_W_DATA;
+   input  [3:0]       WGROUP_APB_AXI_W_STRB;
+   input              WGROUP_APB_AXI_W_LAST;
+   input              WGROUP_APB_AXI_W_VALID;
+   output             WGROUP_APB_AXI_W_READY;
+   output [3:0]       BGROUP_APB_AXI_B_ID;
+   output [1:0]       BGROUP_APB_AXI_B_RESP;
+   output             BGROUP_APB_AXI_B_VALID;
+   input              BGROUP_APB_AXI_B_READY;
+
    
    parameter              RESP_OK     = 2'b00;
    parameter              RESP_SLVERR = 2'b10;
    parameter              RESP_DECERR = 2'b11;
    
-   reg                    BGROUP_APB_AXI_B.OUT;
+   reg [3:0]       BGROUP_APB_AXI_B_ID;
+   reg [1:0]       BGROUP_APB_AXI_B_RESP;
+   reg             BGROUP_APB_AXI_B_VALID;
    
    
-   assign                 finish_wr = BVALID & BREADY;
+   assign                 finish_wr = BGROUP_APB_AXI_B_VALID & BGROUP_APB_AXI_B_READY;
    
-   assign                 WREADY = psel & penable & pwrite & pready;
+   assign                 WGROUP_APB_AXI_W_READY = psel & penable & pwrite & pready;
    
-   always @(posedge clk or posedge reset)
-     if (reset)
+   always @(posedge clk )
+     if (~reset_n)
 	   begin
-         BGROUP_APB_AXI_B.OUT <= #FFD {GROUP_APB_AXI_B.OUT.WIDTH{1'b0}};
+   		BGROUP_APB_AXI_B_ID <= #1 {4{1'b0}};
+   		BGROUP_APB_AXI_B_RESP <= #1 {2{1'b0}};
+   		BGROUP_APB_AXI_B_VALID <= #1 {1{1'b0}};
 	   end
 	 else if (finish_wr)
 	   begin
-         BGROUP_APB_AXI_B.OUT <= #FFD {GROUP_APB_AXI_B.OUT.WIDTH{1'b0}};
+   		BGROUP_APB_AXI_B_ID <= #1 {4{1'b0}};
+   		BGROUP_APB_AXI_B_RESP <= #1 {2{1'b0}};
+   		BGROUP_APB_AXI_B_VALID <= #1 {1{1'b0}};
 	   end
 	 else if (psel & penable & pwrite & pready)
 	   begin
-	     BID    <= #FFD cmd_id;
-		 BRESP  <= #FFD cmd_err ? RESP_SLVERR : pslverr ? RESP_DECERR : RESP_OK;
-		 BVALID <= #FFD 1'b1;
+	     	BGROUP_APB_AXI_B_ID    <= #1 cmd_id;
+	     	BGROUP_APB_AXI_B_RESP  <= #1 cmd_err ? RESP_SLVERR : pslverr ? RESP_DECERR : RESP_OK;
+	     	BGROUP_APB_AXI_B_VALID <= #1 1'b1;
 	   end
 	   
 endmodule

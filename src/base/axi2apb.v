@@ -1,4 +1,4 @@
-<##//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 ////                                                             ////
 ////  Author: Eyal Hochberg                                      ////
 ////          eyal@provartec.com                                 ////
@@ -27,40 +27,102 @@
 ////                                                             ////
 //////////////////////////////////////////////////////////////////##>
 
-INCLUDE def_axi2apb.txt 
-  OUTFILE PREFIX.v
-
-    ITER SX
-      module  PREFIX (PORTS);
+module  axi2apb(
+   clk,
+   reset_n,
+   AWGROUP_APB_AXI_A_ID,
+   AWGROUP_APB_AXI_A_ADDR,
+   AWGROUP_APB_AXI_A_LEN,
+   AWGROUP_APB_AXI_A_SIZE,
+   AWGROUP_APB_AXI_A_VALID,
+   AWGROUP_APB_AXI_A_READY,
+   ARGROUP_APB_AXI_A_ID,
+   ARGROUP_APB_AXI_A_ADDR,
+   ARGROUP_APB_AXI_A_LEN,
+   ARGROUP_APB_AXI_A_SIZE,
+   ARGROUP_APB_AXI_A_VALID,
+   ARGROUP_APB_AXI_A_READY,
+   WGROUP_APB_AXI_W_ID,
+   WGROUP_APB_AXI_W_DATA,
+   WGROUP_APB_AXI_W_STRB,
+   WGROUP_APB_AXI_W_LAST,
+   WGROUP_APB_AXI_W_VALID,
+   WGROUP_APB_AXI_W_READY,
+   BGROUP_APB_AXI_B_ID,
+   BGROUP_APB_AXI_B_RESP,
+   BGROUP_APB_AXI_B_VALID,
+   BGROUP_APB_AXI_B_READY,
+   RGROUP_APB_AXI_R_ID,
+   RGROUP_APB_AXI_R_DATA,
+   RGROUP_APB_AXI_R_RESP,
+   RGROUP_APB_AXI_R_LAST,
+   RGROUP_APB_AXI_R_VALID,
+   RGROUP_APB_AXI_R_READY,
+   psel,
+   penable,
+   pwrite,
+   paddr,
+   pwdata,
+   prdata
+);
 
    input              clk;
-   input              reset;
+   input              reset_n;
+ 
+   input  [3:0]       AWGROUP_APB_AXI_A_ID;
+   input  [31:0]      AWGROUP_APB_AXI_A_ADDR;
+   input  [3:0]       AWGROUP_APB_AXI_A_LEN;
+   input  [1:0]       AWGROUP_APB_AXI_A_SIZE;
+   input              AWGROUP_APB_AXI_A_VALID;
+   output             AWGROUP_APB_AXI_A_READY;
+   input  [3:0]       ARGROUP_APB_AXI_A_ID;
+   input  [31:0]      ARGROUP_APB_AXI_A_ADDR;
+   input  [3:0]       ARGROUP_APB_AXI_A_LEN;
+   input  [1:0]       ARGROUP_APB_AXI_A_SIZE;
+   input              ARGROUP_APB_AXI_A_VALID;
+   output             ARGROUP_APB_AXI_A_READY;
+   input  [3:0]       WGROUP_APB_AXI_W_ID;
+   input  [31:0]      WGROUP_APB_AXI_W_DATA;
+   input  [3:0]       WGROUP_APB_AXI_W_STRB;
+   input              WGROUP_APB_AXI_W_LAST;
+   input              WGROUP_APB_AXI_W_VALID;
+   output             WGROUP_APB_AXI_W_READY;
+   output [3:0]	      BGROUP_APB_AXI_B_ID;
+   output [1:0]	      BGROUP_APB_AXI_B_RESP;
+   output	      BGROUP_APB_AXI_B_VALID;
+   input	      BGROUP_APB_AXI_B_READY;
+   output [3:0]	      RGROUP_APB_AXI_R_ID;
+   output [31:0]      RGROUP_APB_AXI_R_DATA;
+   output [1:0]	      RGROUP_APB_AXI_R_RESP;
+   output	      RGROUP_APB_AXI_R_LAST;
+   output	      RGROUP_APB_AXI_R_VALID;
+   input	      RGROUP_APB_AXI_R_READY;
 
-   port               GROUP_APB_AXI;
-   
    //apb slaves
-IFDEF TRUE(SLAVE_NUM==1)
-   port               GROUP_APB3;
-ELSE TRUE(SLAVE_NUM==1)
-   output             penable;
-   output             pwrite;
-   output [ADDR_BITS-1:0] paddr;
-   output [31:0]          pwdata;
-   output                 pselSX;
-   input [31:0]           prdataSX;
-   input                  preadySX;
-   input                  pslverrSX;
-ENDIF TRUE(SLAVE_NUM==1)
+   input	      psel;
+   input	      penable;
+   input	      pwrite;
+   input  [31:0]      paddr;
+   input  [31:0]      pwdata;
+   output [31:0]      prdata;
+   output             pslverr;
+   output             pready;
 
+   wire               psel;
+   wire               penable;
+   wire               pwrite;
+   wire   [31:0]      paddr;
+   wire   [31:0]      pwdata;
+   wire   [31:0]      prdata;
+   wire               pslverr;
+   wire               pready;
 
-
-   wire                   GROUP_APB3;
    
    //outputs of cmd
    wire                   cmd_empty;
    wire                   cmd_read;
-   wire [ID_BITS-1:0]     cmd_id;
-   wire [ADDR_BITS-1:0]   cmd_addr;
+   wire [4-1:0]     cmd_id;
+   wire [32-1:0]   cmd_addr;
    wire                   cmd_err;
    
    //outputs of rd / wr
@@ -69,85 +131,98 @@ ENDIF TRUE(SLAVE_NUM==1)
    
    
    assign                 paddr  = cmd_addr;
-   assign                 pwdata = WDATA;
+   assign                 pwdata = WGROUP_APB_AXI_W_DATA;
 
    
-   CREATE axi2apb_cmd.v
-     PREFIX_cmd PREFIX_cmd(
-					   .clk(clk),
-					   .reset(reset),
-					   .AWGROUP_APB_AXI_A(AWGROUP_APB_AXI_A),
-					   .ARGROUP_APB_AXI_A(ARGROUP_APB_AXI_A),
-					   .finish_wr(finish_wr),
-					   .finish_rd(finish_rd),
-					   .cmd_empty(cmd_empty),
-					   .cmd_read(cmd_read),
-					   .cmd_id(cmd_id),
-					   .cmd_addr(cmd_addr),
-					   .cmd_err(cmd_err)
-                                           );
+     axi2apb_cmd axi2apb_cmd(
+	      	   .clk(clk),
+	      	   .reset_n(reset_n),
+                   .AWGROUP_APB_AXI_A_ID(AWGROUP_APB_AXI_A_ID),
+                   .AWGROUP_APB_AXI_A_ADDR(AWGROUP_APB_AXI_A_ADDR),
+                   .AWGROUP_APB_AXI_A_LEN(AWGROUP_APB_AXI_A_LEN),
+                   .AWGROUP_APB_AXI_A_SIZE(AWGROUP_APB_AXI_A_SIZE),
+                   .AWGROUP_APB_AXI_A_VALID(AWGROUP_APB_AXI_A_VALID),
+                   .AWGROUP_APB_AXI_A_READY(AWGROUP_APB_AXI_A_READY),
+                   .ARGROUP_APB_AXI_A_ID(ARGROUP_APB_AXI_A_ID),
+                   .ARGROUP_APB_AXI_A_ADDR(ARGROUP_APB_AXI_A_ADDR),
+                   .ARGROUP_APB_AXI_A_LEN(ARGROUP_APB_AXI_A_LEN),
+                   .ARGROUP_APB_AXI_A_SIZE(ARGROUP_APB_AXI_A_SIZE),
+                   .ARGROUP_APB_AXI_A_VALID(ARGROUP_APB_AXI_A_VALID),
+                   .ARGROUP_APB_AXI_A_READY(AWGROUP_APB_AXI_A_READY),
+	      	   .finish_wr(finish_wr),
+	      	   .finish_rd(finish_rd),
+	      	   .cmd_empty(cmd_empty),
+	      	   .cmd_read(cmd_read),
+	      	   .cmd_id(cmd_id),
+	      	   .cmd_addr(cmd_addr),
+	      	   .cmd_err(cmd_err)
+                         );
 
    
-   CREATE axi2apb_rd.v
-     PREFIX_rd PREFIX_rd(
-					 .clk(clk),
-					 .reset(reset),
-					 .GROUP_APB3(GROUP_APB3),
-					 .cmd_err(cmd_err),
-					 .cmd_id(cmd_id),
-					 .finish_rd(finish_rd),
-					 .RGROUP_APB_AXI_R(RGROUP_APB_AXI_R),
-                                         STOMP ,
-					 );
+     axi2apb_rd axi2apb_rd(
+		 .clk(clk),
+		 .reset_n(reset_n),
+   		 .psel(psel),
+   		 .penable(penable),
+   		 .pwrite(pwrite),
+   		 .paddr(paddr),
+   		 .pwdata(pwdata),
+   		 .prdata(prdata),
+   		 .pslverr(pslverr),
+   		 .pready(pready),
+		 .cmd_err(cmd_err),
+		 .cmd_id(cmd_id),
+		 .finish_rd(finish_rd),
+   		 .RGROUP_APB_AXI_R_ID(RGROUP_APB_AXI_R_ID),
+   		 .RGROUP_APB_AXI_R_DATA(RGROUP_APB_AXI_R_DATA),
+   		 .RGROUP_APB_AXI_R_RESP(RGROUP_APB_AXI_R_RESP),
+   		 .RGROUP_APB_AXI_R_LAST(RGROUP_APB_AXI_R_LAST),
+   		 .RGROUP_APB_AXI_R_VALID(RGROUP_APB_AXI_R_VALID),
+   		 .RGROUP_APB_AXI_R_READY(RGROUP_APB_AXI_R_READY),
+		 );
    
-   CREATE axi2apb_wr.v
-     PREFIX_wr PREFIX_wr(
-					 .clk(clk),
-					 .reset(reset),
-					 .GROUP_APB3(GROUP_APB3),
-					 .cmd_err(cmd_err),
-					 .cmd_id(cmd_id),
-					 .finish_wr(finish_wr),
-					 .WGROUP_APB_AXI_W(WGROUP_APB_AXI_W),
-					 .BGROUP_APB_AXI_B(BGROUP_APB_AXI_B),
-                                         STOMP ,
-					 );
+     axi2apb_wr axi2apb_wr(
+		 .clk(clk),
+		 .reset_n(reset_n),
+   		 .psel(psel),
+   		 .penable(penable),
+   		 .pwrite(pwrite),
+   		 .paddr(paddr),
+   		 .pwdata(pwdata),
+   		 .prdata(prdata),
+	         .cmd_err(cmd_err),
+	         .cmd_id(cmd_id),
+	         .finish_wr(finish_wr),
+	         .WGROUP_APB_AXI_W(WGROUP_APB_AXI_W),
+	         .BGROUP_APB_AXI_B(BGROUP_APB_AXI_B),
+                 .WGROUP_APB_AXI_W_ID(WGROUP_APB_AXI_W_ID),
+                 .WGROUP_APB_AXI_W_DATA(WGROUP_APB_AXI_W_DATA),
+                 .WGROUP_APB_AXI_W_STRB(WGROUP_APB_AXI_W_STRB),
+                 .WGROUP_APB_AXI_W_LAST(WGROUP_APB_AXI_W_LAST),
+                 .WGROUP_APB_AXI_W_VALID(WGROUP_APB_AXI_W_VALID),
+                 .WGROUP_APB_AXI_W_READY(WGROUP_APB_AXI_W_READY),
+                 .BGROUP_APB_AXI_B_ID(BGROUP_APB_AXI_B_ID),
+                 .BGROUP_APB_AXI_B_RESP(BGROUP_APB_AXI_B_RESP),
+                 .BGROUP_APB_AXI_B_VALID(BGROUP_APB_AXI_B_VALID),
+                 .BGROUP_APB_AXI_B_READY(BGROUP_APB_AXI_B_READY),
+		);
       
 
    
-   CREATE axi2apb_ctrl.v						
-     PREFIX_ctrl PREFIX_ctrl(
+     axi2apb_ctrl axi2apb_ctrl(
 					     .clk(clk),
-					     .reset(reset),
+					     .reset_n(reset_n),
 					     .finish_wr(finish_wr),			
 					     .finish_rd(finish_rd),
 					     .cmd_empty(cmd_empty),
 					     .cmd_read(cmd_read),
-					     .WVALID(WVALID),
+					     .WVALID(WGROUP_APB_AXI_W_VALID),
 					     .psel(psel),
 					     .penable(penable),
 					     .pwrite(pwrite),
 					     .pready(pready)
 					     );
 
-   
-IFDEF TRUE(SLAVE_NUM>1)
-   CREATE axi2apb_mux.v
-     PREFIX_mux PREFIX_mux(
-					   .clk(clk),
-					   .reset(reset),
-					   .cmd_addr(cmd_addr),
-					   .psel(psel),
-					   .prdata(prdata),
-					   .pready(pready),
-					   .pslverr(pslverr),
-					   .pselSX(pselSX),
-					   .preadySX(preadySX),
-					   .pslverrSX(pslverrSX),
-					   .prdataSX(prdataSX),
-					   STOMP ,
-					   );
-ENDIF TRUE(SLAVE_NUM>1)
 
 endmodule
 

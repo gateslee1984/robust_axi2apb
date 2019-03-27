@@ -1,4 +1,4 @@
-<##//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 ////                                                             ////
 ////  Author: Eyal Hochberg                                      ////
 ////          eyal@provartec.com                                 ////
@@ -27,48 +27,70 @@
 ////                                                             ////
 //////////////////////////////////////////////////////////////////##>
 
-INCLUDE def_axi2apb.txt
-OUTFILE PREFIX_rd.v
 
-module  PREFIX_rd (PORTS);
+module  axi2apb_rd (
+);
 
-   input 		          clk;
-   input 		          reset;
+   input 		clk;
+   input 		reset_n;
 
-   input                  GROUP_APB3;
-      
-   input                  cmd_err;
-   input [ID_BITS-1:0]    cmd_id;
-   output                 finish_rd;
+   input		psel; 
+   input		penable; 
+   input		pwrite; 
+   input [31:0]		paddr; 
+   input [31:0]		pwdata; 
+   output [31:0]	prdata; 
+   output		pslverr; 
+   output		pready; 
+
+   input                cmd_err;
+   input [4-1:0]        cmd_id;
+   output               finish_rd;
    
-   port                   RGROUP_APB_AXI_R;
-   
+   output [3:0]       RGROUP_APB_AXI_R_ID;
+   output [31:0]      RGROUP_APB_AXI_R_DATA;
+   output [1:0]       RGROUP_APB_AXI_R_RESP;
+   output             RGROUP_APB_AXI_R_LAST;
+   output             RGROUP_APB_AXI_R_VALID;
+   input              RGROUP_APB_AXI_R_READY;
    
    parameter              RESP_OK     = 2'b00;
    parameter              RESP_SLVERR = 2'b10;
    parameter              RESP_DECERR = 2'b11;
    
-   reg                    RGROUP_APB_AXI_R.OUT;
+   reg	 [3:0]       RGROUP_APB_AXI_R_ID;
+   reg	 [31:0]      RGROUP_APB_AXI_R_DATA;
+   reg	 [1:0]       RGROUP_APB_AXI_R_RESP;
+   reg	             RGROUP_APB_AXI_R_LAST;
+   reg	             RGROUP_APB_AXI_R_VALID;
    
    
-   assign                 finish_rd = RVALID & RREADY & RLAST;
+   assign                 finish_rd = RGROUP_APB_AXI_R_VALID & RGROUP_APB_AXI_R_READY & RGROUP_APB_AXI_R_LAST;
    
-   always @(posedge clk or posedge reset)
-     if (reset)
+   always @(posedge clk )
+     if (~reset_n)
 	   begin
-         RGROUP_APB_AXI_R.OUT <= #FFD {GROUP_APB_AXI_R.OUT.WIDTH{1'b0}};
+   		RGROUP_APB_AXI_R_ID <= #1 {4{1'b0}};
+   		RGROUP_APB_AXI_R_DATA <= #1 {31{1'b0}};
+   		RGROUP_APB_AXI_R_RESP <= #1 {2{1'b0}};
+   		RGROUP_APB_AXI_R_LAST <= #1 {1{1'b0}};
+   		RGROUP_APB_AXI_R_VALID <= #1 {1{1'b0}};
 	   end
 	 else if (finish_rd)
 	   begin
-         RGROUP_APB_AXI_R.OUT <= #FFD {GROUP_APB_AXI_R.OUT.WIDTH{1'b0}};
+   		RGROUP_APB_AXI_R_ID <= #1 {4{1'b0}};
+   		RGROUP_APB_AXI_R_DATA <= #1 {31{1'b0}};
+   		RGROUP_APB_AXI_R_RESP <= #1 {2{1'b0}};
+   		RGROUP_APB_AXI_R_LAST <= #1 {1{1'b0}};
+   		RGROUP_APB_AXI_R_VALID <= #1 {1{1'b0}};
 	   end
 	 else if (psel & penable & (~pwrite) & pready)
 	   begin
-	     RID    <= #FFD cmd_id;
-		 RDATA  <= #FFD prdata;
-		 RRESP  <= #FFD cmd_err ? RESP_SLVERR : pslverr ? RESP_DECERR : RESP_OK;
-		 RLAST  <= #FFD 1'b1;
-		 RVALID <= #FFD 1'b1;
+	        RGROUP_APB_AXI_R_ID    <= #1 cmd_id;
+		RGROUP_APB_AXI_R_DATA  <= #1 prdata;
+		RGROUP_APB_AXI_R_RESP  <= #1 cmd_err ? RESP_SLVERR : pslverr ? RESP_DECERR : RESP_OK;
+		RGROUP_APB_AXI_R_LAST  <= #1 1'b1;
+		RGROUP_APB_AXI_R_VALID <= #1 1'b1;
 	   end
 	   
 endmodule
