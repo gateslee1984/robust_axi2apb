@@ -27,16 +27,11 @@
 ////                                                             ////
 //////////////////////////////////////////////////////////////////##>
 
-IFDEF STUB
-OUTFILE prgen_fifo_stub.v
-module prgen_fifo_stub(PORTS);
-ELSE STUB
-OUTFILE prgen_fifo.v
-module prgen_fifo(PORTS);
-ENDIF STUB
+module prgen_fifo(
+);
   
    parameter                  WIDTH      = 8;
-   parameter                  DEPTH_FULL = 8;
+   parameter                  DEPTH_FULL = 1;
 
    parameter 		      SINGLE     = DEPTH_FULL == 1;
    parameter 		      DEPTH      = SINGLE ? 1 : DEPTH_FULL -1;
@@ -56,7 +51,7 @@ ENDIF STUB
    
 
    input                      clk;
-   input                      reset;
+   input                      reset_n;
 
    input 		      push;
    input 		      pop;
@@ -92,62 +87,62 @@ ENDIF STUB
    assign 		      fifo_pop  = !SINGLE & pop & (~reg_pop);
    
    
-   always @(posedge clk or posedge reset)
-     if (reset)
+   always @(posedge clk )
+     if (~reset_n)
        begin
-	  dout       <= #FFD {WIDTH{1'b0}};
-	  dout_empty <= #FFD 1'b1;
+	  dout       <= #1 {WIDTH{1'b0}};
+	  dout_empty <= #1 1'b1;
        end
      else if (reg_push)
        begin
-	  dout       <= #FFD din;
-	  dout_empty <= #FFD 1'b0;
+	  dout       <= #1 din;
+	  dout_empty <= #1 1'b0;
        end
      else if (reg_pop)
        begin
-	  dout       <= #FFD {WIDTH{1'b0}};
-	  dout_empty <= #FFD 1'b1;
+	  dout       <= #1 {WIDTH{1'b0}};
+	  dout_empty <= #1 1'b1;
        end
      else if (fifo_pop)
        begin
-	  dout       <= #FFD fifo[ptr_out];
-	  dout_empty <= #FFD 1'b0;
+	  dout       <= #1 fifo[ptr_out];
+	  dout_empty <= #1 1'b0;
        end
    
-   always @(posedge clk or posedge reset)
-     if (reset)
-       ptr_in <= #FFD {DEPTH_BITS{1'b0}};
+   always @(posedge clk )
+     if (~reset_n)
+       ptr_in <= #1 {DEPTH_BITS{1'b0}};
      else if (fifo_push)
-       ptr_in <= #FFD ptr_in == LAST_LINE ? 0 : ptr_in + 1'b1;
+       ptr_in <= #1 ptr_in == LAST_LINE ? 0 : ptr_in + 1'b1;
 
-   always @(posedge clk or posedge reset)
-     if (reset)
-       ptr_out <= #FFD {DEPTH_BITS{1'b0}};
+   always @(posedge clk )
+     if (~reset_n)
+       ptr_out <= #1 {DEPTH_BITS{1'b0}};
      else if (fifo_pop)
-       ptr_out <= #FFD ptr_out == LAST_LINE ? 0 : ptr_out + 1'b1;
+       ptr_out <= #1 ptr_out == LAST_LINE ? 0 : ptr_out + 1'b1;
 
    always @(posedge clk)
      if (fifo_push)
-       fifo[ptr_in] <= #FFD din;
+       fifo[ptr_in] <= #1 din;
 
    
-   always @(/*AUTOSENSE*/fifo_push or ptr_in)
+   always @(fifo_push or ptr_in)
      begin
 	full_mask_in = {DEPTH{1'b0}};
 	full_mask_in[ptr_in] = fifo_push;
      end
    
-   always @(/*AUTOSENSE*/fifo_pop or ptr_out)
+   always @(fifo_pop or ptr_out)
      begin
 	full_mask_out = {DEPTH{1'b0}};
 	full_mask_out[ptr_out] = fifo_pop;
      end
    
-   always @(posedge clk or posedge reset)
-     if (reset)
-       full_mask <= #FFD {DEPTH{1'b0}};
+   always @(posedge clk )
+     if (~reset_n)
+       full_mask <= #1 {DEPTH{1'b0}};
      else if (fifo_push | fifo_pop)
-       full_mask <= #FFD (full_mask & (~full_mask_out)) | full_mask_in;
+       full_mask <= #1 (full_mask & (~full_mask_out)) | full_mask_in;
 
 
    assign next       = |full_mask;
@@ -155,42 +150,7 @@ ENDIF STUB
    assign empty      = fifo_empty & dout_empty;
    assign full       = SINGLE ? !dout_empty : &full_mask;
 
-
-   
-IFDEF STUB
-  reg [DEPTH_BITS:0] fullness;
-   
-   always @(posedge clk or posedge reset)
-     if (reset)
-       fullness <= #FFD {DEPTH_BITS+1{1'b0}};
-     else if (push | pop)
-       fullness <= #FFD fullness + push - pop;
-   
-   wire              overflow  = full & fifo_push & (~fifo_pop);
-   wire              underflow = empty & fifo_pop & (~fifo_push);
-   
-   always @(posedge overflow)
-     begin
-        #1;
-        if (overflow)
-          begin
-             $display("-E-%m - overflow.\tTime: %0d ns", $time);
-             #1000;
-             $finish;
-          end
-     end
-   always @(posedge underflow)
-     begin
-        #1;
-        if (underflow)
-          begin
-             $display("-E-%m - underflow.\tTime: %0d ns", $time);
-             #1000;
-             $finish;
-          end
-     end
-ENDIF STUB
-   
+  
 endmodule
 
 
